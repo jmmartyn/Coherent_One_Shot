@@ -83,8 +83,31 @@ class QSP(keras.layers.Layer):
             return tf.math.real(u[:, 0, 0]), tf.math.imag(u[:, 0, 1])
 
 
+def mean_deviation(y_true, y_pred):
+  deviations = tf.abs(tf.subtract(y_true, y_pred))
+  loss = tf.math.reduce_mean(deviations)
+  return loss
 
-def construct_qsp_model(poly_deg, convention):
+
+def max_deviation(y_true, y_pred):
+  deviations = tf.abs(tf.subtract(y_true, y_pred))
+  loss = tf.math.reduce_max(deviations)
+  return loss
+
+
+def mean_deviation_squared(y_true, y_pred):
+  deviations = tf.abs(tf.subtract(y_true, y_pred))
+  loss = tf.math.reduce_mean(tf.square(deviations))
+  return loss
+
+
+def max_deviation_squared(y_true, y_pred):
+  deviations = tf.abs(tf.subtract(y_true, y_pred))
+  loss = tf.math.reduce_max(tf.square(deviations))
+  return loss
+
+
+def construct_qsp_model(poly_deg, convention, lr, mean_or_max, squared):
     """Helper function that compiles a QSP model with mean squared error and adam optimizer.
 
     Params
@@ -99,10 +122,25 @@ def construct_qsp_model(poly_deg, convention):
     """
     theta_input = tf.keras.Input(shape=(1,), dtype=tf.float32, name="theta")
     qsp = QSP(poly_deg, convention)
-    real_and_imag_parts = qsp(theta_input)
-    model = tf.keras.Model(inputs=theta_input, outputs=real_and_imag_parts)
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.008)
-    loss = tf.keras.losses.MeanSquaredError()
+    real_and_imag_parts = tf.cast(qsp(theta_input), dtype=tf.complex64)
+    real_and_imag_parts_added = real_and_imag_parts[0]+1j*real_and_imag_parts[1]
+    model = tf.keras.Model(inputs=theta_input, outputs=real_and_imag_parts_added)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
+    # loss = tf.keras.losses.MeanSquaredError()
+    # loss = tf.keras.losses.MeanAbsoluteError()
+
+    if mean_or_max == 0:
+        if squared == 0:
+            loss = mean_deviation
+        elif squared == 1:
+            loss = mean_deviation_squared
+    elif mean_or_max ==1:
+        if squared == 0:
+            loss = max_deviation
+        elif squared == 1:
+            loss = max_deviation_squared
+
     model.compile(optimizer=optimizer, loss=loss)
     model.convention = convention
     return model
+
