@@ -76,10 +76,10 @@ class QSP(keras.layers.Layer):
             u = tf.matmul(u, rz)
 
         if self.convention == 0:
-            # the |0><0| convention; real(p(x)) and imag(p(x))
+            # the |0><0| convention; real(p(x)) + i*imag(p(x))
             return tf.math.real(u[:, 0, 0]), tf.math.imag(u[:, 0, 0])
         elif self.convention == 1:
-            # the |+><+| convention; real(p(x)) and real(Q(x)*sqrt(1-x^2))
+            # the |+><+| convention; real(p(x)) + i*real(Q(x)*sqrt(1-x^2))
             return tf.math.real(u[:, 0, 0]), tf.math.imag(u[:, 0, 1])
 
 
@@ -126,8 +126,6 @@ def construct_qsp_model(poly_deg, convention, lr, mean_or_max, squared):
     real_and_imag_parts_added = real_and_imag_parts[0]+1j*real_and_imag_parts[1]
     model = tf.keras.Model(inputs=theta_input, outputs=real_and_imag_parts_added)
     optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
-    # loss = tf.keras.losses.MeanSquaredError()
-    # loss = tf.keras.losses.MeanAbsoluteError()
 
     if mean_or_max == 0:
         if squared == 0:
